@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% from "macros.html" import urgency_badge, status_chip %}
+{% block title %}{{ task.title }} · TaskFlow{% endblock %}
+{% block heading %}Tarea{% endblock %}
+{% block content %}
+<article class="space-y-4">
+  <section class="rounded-3xl bg-white p-5 shadow-card">
+    <div class="flex items-start justify-between gap-3">
+      <h1 class="break-words text-2xl font-semibold leading-tight">{{ task.title }}</h1>
+      {{ status_chip(task.status) }}
+    </div>
+    <div class="mt-3 flex flex-wrap gap-2">
+      {{ urgency_badge(task.urgency) }}
+      {% if rejection %}
+      <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">Devuelta</span>
+      {% endif %}
+    </div>
+    <p class="mt-4 whitespace-pre-wrap break-words text-slate-700">{{ task.description }}</p>
+    <dl class="mt-4 space-y-2 text-sm text-slate-600">
+      {% if user.role == 'supervisor' %}
+      <div class="flex justify-between gap-3"><dt>Asignada a</dt><dd class="text-right font-medium text-slate-900">{{ task.assignee.name }}</dd></div>
+      {% endif %}
+      <div class="flex justify-between gap-3"><dt>Creada por</dt><dd class="text-right font-medium text-slate-900">{{ task.creator.name }}</dd></div>
+      <div class="flex justify-between gap-3"><dt>Creada</dt><dd class="text-right">{{ task.created_at | format_dt }}</dd></div>
+      <div class="flex justify-between gap-3">
+        <dt>Fecha límite</dt>
+        <dd class="text-right {% if task.due_date and task.due_date < today and task.status != 'APROBADA' %}font-medium text-red-700{% endif %}">
+          {% if task.due_date %}{{ task.due_date | format_dt }}{% else %}Sin fecha{% endif %}
+        </dd>
+      </div>
+    </dl>
+    {% if user.role == 'supervisor' %}
+    <div class="mt-5 flex flex-col gap-3 sm:flex-row">
+      <a href="/tareas/{{ task.id }}/editar" class="btn-secondary w-full sm:w-auto">Editar</a>
+      <form method="post" action="/tareas/{{ task.id }}/eliminar" data-enhance data-api="/api/tareas/{{ task.id }}" data-method="DELETE" data-kind="empty" data-confirm="¿Eliminar esta tarea? La evidencia también se borrará." data-redirect="/tareas">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn-danger w-full sm:w-auto">Eliminar</button>
+      </form>
+    </div>
+    {% endif %}
+  </section>
+
+  {% if task.status == 'APROBADA' %}
+  <section class="rounded-3xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-900">Tarea aprobada.</section>
+  {% elif task.status == 'EN_REVISION' %}
+  <section class="rounded-3xl border border-indigo-200 bg-indigo-50 p-4 text-indigo-900">En revisión por un supervisor.</section>
+  {% endif %}
+
+  {% if rejection %}
+  <section class="rounded-3xl border border-rose-200 bg-rose-50 p-4">
+    <h2 class="font-semibold text-rose-800">Resultado de la revisión</h2>
+    <p class="mt-1 text-sm text-rose-900">{{ rejection.comment or "El supervisor rechazó la evidencia. Puedes enviar una foto nueva." }}</p>
+  </section>
+  {% endif %}
+
+  {% if user.role == 'colaborador' and task.status == 'PENDIENTE' %}
+  <section class="rounded-3xl bg-white p-5 shadow-card">
+    <h2 class="text-lg font-semibold">Enviar a revisión</h2>
+    <p class="mt-1 text-sm text-slate-500">La foto es obligatoria. Puedes tomarla con la cámara.</p>
+    <form method="post" action="/tareas/{{ task.id }}/completar" enctype="multipart/form-data" class="mt-4 space-y-4" data-enhance data-api="/api/tareas/{{ task.id }}/completar" data-kind="multipart">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div>
+        <span id="photo-label" class="mb-1 block text-sm font-medium">Foto de evidencia</span>
+        <div class="file-picker">
+          <div class="btn-secondary w-full" aria-hidden="true">Tomar o elegir foto</div>
+          <input id="photo-input" name="photo" type="file" accept="image/*" capture="environment" required aria-labelledby="photo-label">
+        </div>
+        <p id="photo-name" class="mt-2 text-sm text-slate-500"></p>
+        <img id="photo-preview" alt="Vista previa de la evidencia" class="mt-3 hidden max-h-72 w-full rounded-2xl object-cover">
+      </div>
+      <div>
+        <label for="comment" class="mb-1 block text-sm font-medium">Comentario (opcional)</label>
+        <textarea id="comment" name="comment" maxlength="2000" rows="3" class="field" placeholder="Qué se ve en la foto"></textarea>
+      </div>
+      <button type="submit" class="btn-primary w-full">Enviar a revisión</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {% if user.role == 'supervisor' and task.status == 'EN_REVISION' %}
+  <section class="rounded-3xl bg-white p-5 shadow-card">
+    <h2 class="text-lg font-semibold">Revisar evidencia</h2>
+    <div class="mt-4 flex flex-col gap-3">
+      <form method="post" action="/tareas/{{ task.id }}/aprobar" data-enhance data-api="/api/tareas/{{ task.id }}/aprobar" data-kind="empty">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button type="submit" class="btn-primary w-full">Aprobar</button>
+      </form>
+      <form method="post" action="/tareas/{{ task.id }}/rechazar" class="space-y-3" data-enhance data-api="/api/tareas/{{ task.id }}/rechazar" data-kind="json">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <label for="reject-comment" class="block text-sm font-medium">Comentario de rechazo (opcional)</label>
+        <textarea id="reject-comment" name="comment" maxlength="2000" rows="3" class="field" placeholder="Qué debe corregir el colaborador"></textarea>
+        <button type="submit" class="btn-danger w-full">Rechazar</button>
+      </form>
+    </div>
+  </section>
+  {% endif %}
+
+  <section class="rounded-3xl bg-white p-5 shadow-card">
+    <h2 class="text-lg font-semibold">Evidencia</h2>
+    {% set photos = task.evidence | sorted_evidence %}
+    {% if photos %}
+    <ul class="mt-4 space-y-4">
+      {% for item in photos %}
+      <li class="overflow-hidden rounded-2xl border border-slate-200">
+        <img src="/evidencias/{{ item.id }}" alt="Evidencia de {{ task.title }} del {{ item.uploaded_at | format_dt }}" class="max-h-96 w-full object-cover">
+        <div class="space-y-1 p-3 text-sm text-slate-600">
+          <p>{{ item.uploaded_at | format_dt }}</p>
+          {% if item.comment %}<p class="text-slate-800">{{ item.comment }}</p>{% endif %}
+        </div>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="mt-3 text-sm text-slate-500">Todavía no hay fotos.</p>
+    {% endif %}
+  </section>
+
+  <section class="rounded-3xl bg-white p-5 shadow-card">
+    <h2 class="text-lg font-semibold">Historial</h2>
+    <ol class="mt-4 space-y-3">
+      {% for item in task.history | sorted_history %}
+      <li class="rounded-2xl bg-slate-50 px-3 py-3">
+        <p class="text-sm font-medium">{{ status_label(item.from_status) }} → {{ status_label(item.to_status) }}</p>
+        <p class="text-xs text-slate-500">{{ item.created_at | format_dt }}{% if item.actor %} · {{ item.actor.name }}{% endif %}</p>
+        {% if item.comment %}<p class="mt-1 text-sm text-slate-700">{{ item.comment }}</p>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </section>
+</article>
+{% endblock %}

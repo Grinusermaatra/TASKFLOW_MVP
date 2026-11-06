@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Notificaciones · TaskFlow{% endblock %}
+{% block heading %}Notificaciones{% endblock %}
+{% block content %}
+<div class="mb-4 flex items-center justify-between gap-3">
+  <p class="text-sm text-slate-500">{{ unread_count }} sin leer</p>
+  {% if notifications %}
+  <form method="post" action="/notificaciones/leer-todas" data-enhance data-api="/api/notificaciones/leer-todas" data-kind="empty" data-redirect="/notificaciones">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <button type="submit" class="btn-secondary">Marcar todas</button>
+  </form>
+  {% endif %}
+</div>
+{% if notifications %}
+<ul class="space-y-3">
+  {% for item in notifications %}
+  <li>
+    <a href="/notificaciones/{{ item.id }}/abrir" class="block rounded-3xl border border-slate-200/80 bg-white p-4 shadow-card {% if not item.is_read %}ring-2 ring-indigo-100{% endif %}">
+      <p class="text-sm {% if not item.is_read %}font-semibold{% endif %}">{{ item.message }}</p>
+      <p class="mt-2 text-xs text-slate-500">{{ item.created_at | format_dt }}{% if not item.is_read %} · Sin leer{% endif %}</p>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="rounded-3xl bg-white p-6 text-center shadow-card">
+  <h2 class="text-lg font-semibold">Sin notificaciones</h2>
+  <p class="mt-2 text-sm text-slate-500">Aquí verás asignaciones, envíos a revisión y resultados.</p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,19 @@
+{% macro urgency_badge(urgency) -%}
+  {% set styles = {
+    'baja': 'bg-gray-100 text-gray-700',
+    'media': 'bg-amber-100 text-amber-800',
+    'alta': 'bg-orange-100 text-orange-800',
+    'crítica': 'bg-red-100 text-red-800'
+  } %}
+  <span class="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ styles.get(urgency, 'bg-gray-100 text-gray-700') }}">{{ urgency_label(urgency) }}</span>
+{%- endmacro %}
+
+{% macro status_chip(status) -%}
+  {% set styles = {
+    'PENDIENTE': 'bg-slate-100 text-slate-700',
+    'EN_REVISION': 'bg-indigo-100 text-indigo-800',
+    'APROBADA': 'bg-emerald-100 text-emerald-800',
+    'RECHAZADA': 'bg-rose-100 text-rose-800'
+  } %}
+  <span class="inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-xs font-semibold {{ styles.get(status, 'bg-slate-100 text-slate-700') }}">{{ status_label(status) }}</span>
+{%- endmacro %}

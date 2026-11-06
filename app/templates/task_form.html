@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Editar tarea{% else %}Nueva tarea{% endif %} · TaskFlow{% endblock %}
+{% block heading %}{% if mode == 'edit' %}Editar tarea{% else %}Nueva tarea{% endif %}{% endblock %}
+{% block content %}
+<section class="rounded-3xl bg-white p-5 shadow-card">
+  <h1 class="text-xl font-semibold">{% if mode == 'edit' %}Editar tarea{% else %}Asignar tarea{% endif %}</h1>
+  {% if errors %}
+  <ul class="mt-4 space-y-1 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+    {% for item in errors %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  {% if not assignees %}
+  <p class="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900">Primero registra un colaborador desde Perfil.</p>
+  {% endif %}
+  <form
+    method="post"
+    action="{% if mode == 'edit' %}/tareas/{{ task.id }}/editar{% else %}/tareas{% endif %}"
+    class="mt-5 space-y-4"
+    data-enhance
+    data-api="{% if mode == 'edit' %}/api/tareas/{{ task.id }}{% else %}/api/tareas{% endif %}"
+    data-kind="json"
+    {% if mode == 'edit' %}data-method="PUT"{% endif %}
+  >
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <div>
+      <label for="title" class="mb-1 block text-sm font-medium">Título</label>
+      <input id="title" name="title" required maxlength="200" value="{{ form.title }}" class="field">
+    </div>
+    <div>
+      <label for="description" class="mb-1 block text-sm font-medium">Descripción</label>
+      <textarea id="description" name="description" required maxlength="5000" rows="4" class="field">{{ form.description }}</textarea>
+    </div>
+    <div>
+      <label for="urgency" class="mb-1 block text-sm font-medium">Urgencia</label>
+      <select id="urgency" name="urgency" required class="field">
+        {% for value, label in [('baja', 'Baja'), ('media', 'Media'), ('alta', 'Alta'), ('crítica', 'Crítica')] %}
+        <option value="{{ value }}" {% if form.urgency == value %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="assigned_to" class="mb-1 block text-sm font-medium">Asignar a</label>
+      <select id="assigned_to" name="assigned_to" required class="field">
+        <option value="">Selecciona un colaborador</option>
+        {% for person in assignees %}
+        <option value="{{ person.id }}" {% if form.assigned_to|string == person.id|string %}selected{% endif %}>{{ person.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label for="due_date" class="mb-1 block text-sm font-medium">Fecha límite (opcional)</label>
+      <input id="due_date" name="due_date" type="date" value="{{ form.due_date or '' }}" class="field">
+    </div>
+    <div class="flex flex-col gap-3 sm:flex-row">
+      <button type="submit" class="btn-primary w-full sm:w-auto">{% if mode == 'edit' %}Guardar cambios{% else %}Crear tarea{% endif %}</button>
+      <a href="{% if task %}/tareas/{{ task.id }}{% else %}/tareas{% endif %}" class="btn-secondary w-full sm:w-auto">Cancelar</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

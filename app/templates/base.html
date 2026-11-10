@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#4f46e5">
+  <title>{% block title %}TaskFlow{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ["Inter", "ui-sans-serif", "system-ui", "sans-serif"] },
+          boxShadow: { card: "0 10px 30px -16px rgb(15 23 42 / 0.35)" }
+        }
+      }
+    };
+  </script>
+  <link rel="stylesheet" href="/static/styles.css">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body class="min-h-screen bg-slate-100 text-slate-900 font-sans antialiased">
+  <div class="md:flex min-h-screen">
+    {% if user %}
+    <aside class="hidden md:flex md:w-64 md:shrink-0 md:flex-col md:border-r md:border-slate-200 md:bg-white">
+      <a href="/tareas" class="flex items-center gap-3 px-5 py-6">
+        <span class="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-600 text-white font-bold">T</span>
+        <span>
+          <span class="block text-lg font-semibold leading-tight">TaskFlow</span>
+          <span class="block text-xs text-slate-500">{{ user.organization.name }}</span>
+        </span>
+      </a>
+      <nav class="flex flex-col gap-1 px-3" aria-label="Principal">
+        {% include "nav_links.html" %}
+      </nav>
+      <div class="mt-auto border-t border-slate-100 p-4">
+        <p class="truncate text-sm font-medium">{{ user.name }}</p>
+        <p class="truncate text-xs text-slate-500">{{ role_label(user.role) }}</p>
+      </div>
+    </aside>
+    {% endif %}
+    <div class="flex min-w-0 flex-1 flex-col">
+      {% if user %}
+      <header class="sticky top-0 z-20 flex items-center justify-between gap-3 border-b border-slate-200 bg-white/90 px-4 py-3 backdrop-blur">
+        <div class="min-w-0">
+          <p class="truncate text-xs font-medium uppercase tracking-wide text-indigo-600">TaskFlow</p>
+          <h1 class="truncate text-lg font-semibold">{% block heading %}Inicio{% endblock %}</h1>
+        </div>
+        <a href="/notificaciones" class="relative inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full text-slate-700 hover:bg-slate-100" aria-label="Notificaciones{% if unread_count %} ({{ unread_count }} sin leer){% endif %}">
+          <svg class="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+          {% if unread_count %}
+          <span class="absolute right-1 top-1 inline-flex min-h-[18px] min-w-[18px] items-center justify-center rounded-full bg-indigo-600 px-1 text-[11px] font-semibold text-white">{{ unread_count }}</span>
+          {% endif %}
+        </a>
+      </header>
+      {% endif %}
+      <main class="mx-auto w-full max-w-3xl flex-1 px-4 py-4 {% if user %}{% if show_fab %}pb-44{% else %}pb-28{% endif %} md:pb-10{% endif %}">
+        {% block content %}{% endblock %}
+      </main>
+    </div>
+  </div>
+  {% if user %}
+  <nav class="fixed inset-x-0 bottom-0 z-30 border-t border-slate-200 bg-white md:hidden" aria-label="Móvil">
+    <div class="mx-auto grid max-w-3xl grid-cols-3">
+      {% include "nav_links.html" %}
+    </div>
+  </nav>
+  {% endif %}
+  {% if show_fab %}
+  <a href="/tareas/nueva" class="fixed bottom-24 right-4 z-40 inline-flex min-h-[56px] min-w-[56px] items-center justify-center rounded-full bg-indigo-600 text-3xl font-light leading-none text-white shadow-lg md:bottom-8" aria-label="Nueva tarea">+</a>
+  {% endif %}
+  <div id="toasts" class="pointer-events-none fixed inset-x-0 top-4 z-50 flex flex-col items-center gap-2 px-4"></div>
+  {% if flash %}
+  <script>window.__FLASH__ = {{ flash | tojson }};</script>
+  {% endif %}
+  <script src="/static/app.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

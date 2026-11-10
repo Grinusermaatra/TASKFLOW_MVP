@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: taskflow
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: SEED_ON_STARTUP
+        value: "1"
+      - key: COOKIE_SECURE
+        value: "true"
+      - key: TASKFLOW_ENV
+        value: production
+      - key: PYTHONUNBUFFERED
+        value: "1"

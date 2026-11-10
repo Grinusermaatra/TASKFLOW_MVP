@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% from "macros.html" import urgency_badge, status_chip %}
+{% block title %}Tareas · TaskFlow{% endblock %}
+{% block heading %}Inicio{% endblock %}
+{% block content %}
+<div class="mb-4">
+  <p class="text-sm text-slate-500">Hola, {{ user.name }}</p>
+  <p class="text-sm text-slate-500">{{ total }} {% if total == 1 %}tarea{% else %}tareas{% endif %}{% if q %} para «{{ q }}»{% endif %}</p>
+</div>
+<form method="get" action="/tareas" class="mb-3" role="search">
+  <input type="hidden" name="tab" value="{{ tab }}">
+  <label for="q" class="sr-only">Buscar tareas</label>
+  <input id="q" name="q" value="{{ q }}" placeholder="Buscar por título o descripción" class="field">
+</form>
+<nav class="mb-4 flex gap-2 overflow-x-auto pb-1" aria-label="Estados">
+  {% for key, label in tabs %}
+  <a href="/tareas?tab={{ key }}&amp;q={{ q | urlencode }}" class="tab {% if tab == key %}is-active{% endif %}">
+    {{ label }}
+    <span class="ml-2 rounded-full bg-white/80 px-2 py-0.5 text-xs text-slate-700">{{ counts[key] }}</span>
+  </a>
+  {% endfor %}
+</nav>
+{% if tab == 'rechazadas' %}
+<p class="mb-3 text-sm text-slate-600">Tareas devueltas a pendiente después de un rechazo. La evidencia se conserva y también aparecen en Pendientes para corregirlas.</p>
+{% endif %}
+{% if tasks %}
+<ul class="space-y-3">
+  {% for task in tasks %}
+  <li>
+    <a href="/tareas/{{ task.id }}" class="block rounded-3xl border border-slate-200/80 bg-white p-4 shadow-card">
+      <div class="flex items-start justify-between gap-3">
+        <h2 class="break-words text-base font-semibold leading-snug">{{ task.title }}</h2>
+        {{ status_chip(task.status) }}
+      </div>
+      <div class="mt-3 flex flex-wrap items-center gap-2">
+        {{ urgency_badge(task.urgency) }}
+        {% if task.awaiting_rework %}
+        <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700">Devuelta</span>
+        {% endif %}
+      </div>
+      {% if user.role == 'supervisor' %}
+      <p class="mt-3 text-sm text-slate-600">Asignada a {{ task.assignee.name }}</p>
+      {% endif %}
+      {% if task.due_date %}
+      <p class="mt-1 text-sm {% if task.due_date < today and task.status != 'APROBADA' %}font-medium text-red-700{% else %}text-slate-500{% endif %}">
+        Fecha límite {{ task.due_date | format_dt }}
+        {% if task.due_date < today and task.status != 'APROBADA' %}· Vencida{% endif %}
+      </p>
+      {% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<section class="rounded-3xl bg-white p-6 text-center shadow-card">
+  <h2 class="text-lg font-semibold">No hay tareas aquí</h2>
+  <p class="mt-2 text-sm text-slate-500">
+    {% if q %}Prueba con otra búsqueda.{% elif user.role == 'supervisor' %}Crea una tarea con el botón +.{% else %}Cuando te asignen una tarea, aparecerá en esta lista.{% endif %}
+  </p>
+</section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}Crear cuenta · TaskFlow{% endblock %}
+{% block content %}
+<section class="mx-auto mt-6 max-w-md rounded-3xl bg-white p-6 shadow-card">
+  <h1 class="text-2xl font-semibold">Únete a tu equipo</h1>
+  <p class="mt-1 text-sm text-slate-500">Esta invitación crea un usuario colaborador.</p>
+  {% if errors %}
+  <ul class="mt-4 space-y-1 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+    {% for item in errors %}<li>{{ item }}</li>{% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="/registro" class="mt-5 space-y-4">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <input type="hidden" name="token" value="{{ token }}">
+    <div>
+      <label for="name" class="mb-1 block text-sm font-medium">Nombre</label>
+      <input id="name" name="name" required maxlength="200" value="{{ form.name }}" class="field">
+    </div>
+    <div>
+      <label for="username" class="mb-1 block text-sm font-medium">Usuario</label>
+      <input id="username" name="username" required autocomplete="username" value="{{ form.username }}" class="field">
+    </div>
+    <div>
+      <label for="email" class="mb-1 block text-sm font-medium">Correo</label>
+      <input id="email" name="email" type="email" required autocomplete="email" value="{{ form.email }}" class="field">
+    </div>
+    <div>
+      <label for="password" class="mb-1 block text-sm font-medium">Contraseña</label>
+      <input id="password" name="password" type="password" required minlength="8" autocomplete="new-password" class="field">
+    </div>
+    <button type="submit" class="btn-primary w-full">Crear cuenta</button>
+  </form>
+</section>
+{% endblock %}

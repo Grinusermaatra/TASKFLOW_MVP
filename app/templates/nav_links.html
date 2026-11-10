@@ -1,0 +1,15 @@
+<a href="/tareas" class="nav-link {% if nav == 'inicio' %}is-active{% endif %}" {% if nav == 'inicio' %}aria-current="page"{% endif %}>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M4 10.5 12 4l8 6.5V20a1 1 0 0 1-1 1h-5v-6H10v6H5a1 1 0 0 1-1-1v-9.5Z"/></svg>
+  <span>Inicio</span>
+</a>
+<a href="/notificaciones" class="nav-link {% if nav == 'notificaciones' %}is-active{% endif %}" {% if nav == 'notificaciones' %}aria-current="page"{% endif %}>
+  <span class="relative">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M15 17h5l-1.4-1.4A2 2 0 0 1 18 14.2V11a6 6 0 1 0-12 0v3.2c0 .5-.2 1-.6 1.4L4 17h5"/><path d="M9 17a3 3 0 0 0 6 0"/></svg>
+    {% if unread_count %}<span class="absolute -right-2 -top-1 rounded-full bg-indigo-600 px-1 text-[10px] font-semibold text-white">{{ unread_count }}</span>{% endif %}
+  </span>
+  <span>Notificaciones</span>
+</a>
+<a href="/perfil" class="nav-link {% if nav == 'perfil' %}is-active{% endif %}" {% if nav == 'perfil' %}aria-current="page"{% endif %}>
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="8" r="3.2"/><path d="M5 19.2a7 7 0 0 1 14 0"/></svg>
+  <span>Perfil</span>
+</a>

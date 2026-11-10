@@ -70,11 +70,37 @@ def test_seed_prints_a_password_once_and_rotate_replaces_it(tmp_path):
     first = run()
     assert first.returncode == 0, first.stderr
     passwords = _passwords(first.stdout)
-    assert set(passwords) == {"ana.supervisor", "luis.colaborador", "maria.colaborador"}
-    assert len(set(passwords.values())) == 3
+    assert set(passwords) == {
+        "ana.supervisor",
+        "luis.colaborador",
+        "maria.colaborador",
+        "ramses.supervisor",
+        "regina.colaborador",
+    }
+    assert len(set(passwords.values())) == 5
     for value in passwords.values():
         assert value not in FIXED
         assert len(value) >= 16
+
+    connection = sqlite3.connect(database)
+    roles = dict(connection.execute("SELECT username, role FROM users"))
+    names = dict(connection.execute("SELECT username, name FROM users"))
+    assignment = connection.execute(
+        """
+        SELECT tasks.status
+        FROM tasks
+        JOIN users AS creator ON creator.id = tasks.created_by
+        JOIN users AS assignee ON assignee.id = tasks.assigned_to
+        WHERE creator.username = 'ramses.supervisor'
+          AND assignee.username = 'regina.colaborador'
+        """
+    ).fetchall()
+    connection.close()
+    assert roles["ramses.supervisor"] == "supervisor"
+    assert roles["regina.colaborador"] == "colaborador"
+    assert names["ramses.supervisor"] == "Ramses"
+    assert names["regina.colaborador"] == "Regina"
+    assert assignment == [("PENDIENTE",)]
 
     second = run()
     assert second.returncode == 0, second.stderr

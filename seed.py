@@ -1,4 +1,4 @@
-"""Seed one demo organization, three users, and four tasks.
+"""Seed one demo organization, five users, and five tasks.
 
 Run from the repository root: python seed.py
 Passwords are random and printed once. python seed.py --rotate replaces them
@@ -49,7 +49,17 @@ MARIA = {
     "username": "maria.colaborador",
     "email": "maria.colaborador@taskflow.demo",
 }
-DEMO_ACCOUNTS = (SUPERVISOR, LUIS, MARIA)
+RAMSES = {
+    "name": "Ramses",
+    "username": "ramses.supervisor",
+    "email": "ramses.supervisor@taskflow.demo",
+}
+REGINA = {
+    "name": "Regina",
+    "username": "regina.colaborador",
+    "email": "regina.colaborador@taskflow.demo",
+}
+DEMO_ACCOUNTS = (SUPERVISOR, LUIS, MARIA, RAMSES, REGINA)
 
 
 def fresh_password() -> str:
@@ -122,7 +132,27 @@ async def run() -> None:
             role=ROLE_COLABORADOR,
             created_at=now - timedelta(days=9),
         )
-        session.add_all([ana, luis, maria])
+        ramses = User(
+            org_id=org.id,
+            name=RAMSES["name"],
+            username=RAMSES["username"],
+            email=RAMSES["email"],
+            password_hash=hash_password(passwords[RAMSES["username"]]),
+            session_version=0,
+            role=ROLE_SUPERVISOR,
+            created_at=now - timedelta(days=8),
+        )
+        regina = User(
+            org_id=org.id,
+            name=REGINA["name"],
+            username=REGINA["username"],
+            email=REGINA["email"],
+            password_hash=hash_password(passwords[REGINA["username"]]),
+            session_version=0,
+            role=ROLE_COLABORADOR,
+            created_at=now - timedelta(days=8),
+        )
+        session.add_all([ana, luis, maria, ramses, regina])
         await session.flush()
 
         folder = settings.upload_path / str(org.id)
@@ -180,7 +210,18 @@ async def run() -> None:
             created_at=now - timedelta(days=4),
             due_date=now.date(),
         )
-        session.add_all([inventory, showcase, prices, cold_room])
+        counter_order = Task(
+            org_id=org.id,
+            title="Preparar pedido de mostrador",
+            description="Arma el pedido del mostrador, verifica las cantidades y deja la orden lista para entrega.",
+            urgency="alta",
+            assigned_to=regina.id,
+            created_by=ramses.id,
+            status=STATUS_PENDIENTE,
+            created_at=now - timedelta(hours=6),
+            due_date=(now + timedelta(days=1)).date(),
+        )
+        session.add_all([inventory, showcase, prices, cold_room, counter_order])
         await session.flush()
 
         def history(task, when, from_status, to_status, actor, comment=None):
@@ -220,6 +261,7 @@ async def run() -> None:
             ana,
             "La tarea volvió a pendiente para corrección. La evidencia se conserva.",
         )
+        history(counter_order, counter_order.created_at, None, STATUS_PENDIENTE, ramses)
 
         session.add_all(
             [
@@ -264,6 +306,15 @@ async def run() -> None:
                     message=f"{maria.name} envió «{showcase.title}» a revisión.",
                     is_read=False,
                     created_at=now - timedelta(hours=20),
+                ),
+                Notification(
+                    org_id=org.id,
+                    user_id=regina.id,
+                    task_id=counter_order.id,
+                    type=TYPE_ASSIGNED,
+                    message=f"Se te asignó la tarea «{counter_order.title}».",
+                    is_read=False,
+                    created_at=counter_order.created_at,
                 ),
                 Notification(
                     org_id=org.id,

@@ -27,6 +27,8 @@ Organization: **TaskFlow Demo**
 | Supervisor | Ana Ruiz | `ana.supervisor` |
 | Colaborador | Luis Gómez | `luis.colaborador` |
 | Colaborador | María Pérez | `maria.colaborador` |
+| Supervisor | Ramses | `ramses.supervisor` |
+| Colaborador | Regina | `regina.colaborador` |
 
 Running `python seed.py` again does not insert duplicates and does not print the passwords a second time. To replace them and sign out existing sessions:
 
@@ -36,12 +38,13 @@ python seed.py --rotate
 
 The new passwords are printed once on that command's stdout. Anyone signed in with the previous password has to sign in again. Each person can also change their own password from **Perfil**; that closes every other session for the account.
 
-The seed creates four tasks:
+The seed creates five tasks:
 
 - **Pendiente:** Revisar inventario de bodega (Luis)
 - **En revisión:** Fotografiar vitrina principal (María), with a sample PNG
 - **Aprobada:** Actualizar precios de góndola (Luis), with evidence
 - **Devuelta:** Limpiar cámara de frío (María). A supervisor rejected it, so the status is `PENDIENTE` again and the photo is still on the task. It shows under **Rechazadas** and under **Pendientes**.
+- **Pendiente:** Preparar pedido de mostrador (Regina, assigned by Ramses)
 
 ## End-to-end check
 

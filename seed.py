@@ -1,10 +1,15 @@
 """Seed one demo organization, three users, and four tasks.
 
 Run from the repository root: python seed.py
-The command is idempotent: if the demo supervisor already exists, it exits.
+Passwords are random and printed once. python seed.py --rotate replaces them
+and signs out existing sessions for those accounts.
+The command is idempotent: if the demo supervisor already exists, it exits
+without printing passwords.
 """
 
+import argparse
 import asyncio
+import secrets
 from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
@@ -23,7 +28,7 @@ from app.constants import (
     TYPE_REJECTED,
     TYPE_REVIEW,
 )
-from app.config import settings
+from app.config import enforce_runtime_safety, settings
 from app.database import SessionLocal, init_db
 from app.models import Notification, Organization, Task, TaskEvidence, TaskStatusHistory, User, utcnow
 from app.security import hash_password
@@ -33,32 +38,32 @@ SUPERVISOR = {
     "name": "Ana Ruiz",
     "username": "ana.supervisor",
     "email": "ana.supervisor@taskflow.demo",
-    "password": "Supervisor123!",
 }
 LUIS = {
     "name": "Luis Gómez",
     "username": "luis.colaborador",
     "email": "luis.colaborador@taskflow.demo",
-    "password": "Colaborador123!",
 }
 MARIA = {
     "name": "María Pérez",
     "username": "maria.colaborador",
     "email": "maria.colaborador@taskflow.demo",
-    "password": "Colaborador123!",
 }
+DEMO_ACCOUNTS = (SUPERVISOR, LUIS, MARIA)
 
 
-def print_credentials() -> None:
+def fresh_password() -> str:
+    return secrets.token_urlsafe(18)
+
+
+def print_credentials(passwords: dict[str, str]) -> None:
+    print("Contraseñas generadas. Se muestran solo esta vez y no se guardan en el repositorio.")
     print("Organización: TaskFlow Demo")
-    print("Supervisor")
-    print(f"  usuario:    {SUPERVISOR['username']}")
-    print(f"  contraseña: {SUPERVISOR['password']}")
-    print("Colaboradores")
-    print(f"  usuario:    {LUIS['username']}")
-    print(f"  contraseña: {LUIS['password']}")
-    print(f"  usuario:    {MARIA['username']}")
-    print(f"  contraseña: {MARIA['password']}")
+    for account in DEMO_ACCOUNTS:
+        username = account["username"]
+        print(f"  usuario:    {username}")
+        print(f"  contraseña: {passwords[username]}")
+    print("Guárdalas ahora. Para reemplazarlas: python seed.py --rotate")
 
 
 def write_sample(path: Path, title: str, color: tuple[int, int, int]) -> None:
@@ -78,9 +83,10 @@ async def run() -> None:
         existing = await session.scalar(select(User).where(User.username == SUPERVISOR["username"]))
         if existing is not None:
             print("La semilla ya existe. No se duplicaron datos.")
-            print_credentials()
+            print("Las contraseñas no se vuelven a mostrar. Para generar otras: python seed.py --rotate")
             return
 
+        passwords = {account["username"]: fresh_password() for account in DEMO_ACCOUNTS}
         now = utcnow()
         org = Organization(name="TaskFlow Demo", created_at=now - timedelta(days=10))
         session.add(org)
@@ -91,7 +97,8 @@ async def run() -> None:
             name=SUPERVISOR["name"],
             username=SUPERVISOR["username"],
             email=SUPERVISOR["email"],
-            password_hash=hash_password(SUPERVISOR["password"]),
+            password_hash=hash_password(passwords[SUPERVISOR["username"]]),
+            session_version=0,
             role=ROLE_SUPERVISOR,
             created_at=now - timedelta(days=10),
         )
@@ -100,7 +107,8 @@ async def run() -> None:
             name=LUIS["name"],
             username=LUIS["username"],
             email=LUIS["email"],
-            password_hash=hash_password(LUIS["password"]),
+            password_hash=hash_password(passwords[LUIS["username"]]),
+            session_version=0,
             role=ROLE_COLABORADOR,
             created_at=now - timedelta(days=9),
         )
@@ -109,7 +117,8 @@ async def run() -> None:
             name=MARIA["name"],
             username=MARIA["username"],
             email=MARIA["email"],
-            password_hash=hash_password(MARIA["password"]),
+            password_hash=hash_password(passwords[MARIA["username"]]),
+            session_version=0,
             role=ROLE_COLABORADOR,
             created_at=now - timedelta(days=9),
         )
@@ -272,8 +281,44 @@ async def run() -> None:
         )
         await session.commit()
         print("Semilla creada.")
-        print_credentials()
+        print_credentials(passwords)
+
+
+async def rotate() -> None:
+    await init_db()
+    async with SessionLocal() as session:
+        passwords: dict[str, str] = {}
+        users = []
+        for account in DEMO_ACCOUNTS:
+            user = await session.scalar(select(User).where(User.username == account["username"]))
+            if user is None:
+                print(f"No existe {account['username']}. Ejecuta python seed.py primero.")
+                raise SystemExit(1)
+            users.append(user)
+        for user in users:
+            password = fresh_password()
+            user.password_hash = hash_password(password)
+            user.session_version = int(user.session_version or 0) + 1
+            passwords[user.username] = password
+        await session.commit()
+    print("Contraseñas de la demo rotadas. Las sesiones anteriores dejaron de valer.")
+    print_credentials(passwords)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Crea o rota las cuentas demo de TaskFlow.")
+    parser.add_argument(
+        "--rotate",
+        action="store_true",
+        help="Genera contraseñas nuevas para las cuentas demo y cierra sus sesiones.",
+    )
+    args = parser.parse_args()
+    enforce_runtime_safety()
+    if args.rotate:
+        asyncio.run(rotate())
+    else:
+        asyncio.run(run())
 
 
 if __name__ == "__main__":
-    asyncio.run(run())
+    main()

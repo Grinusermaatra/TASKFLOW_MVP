@@ -1,6 +1,6 @@
 """Server-rendered pages and form posts."""
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import ValidationError
 from sqlalchemy import select
@@ -9,10 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.constants import ROLE_SUPERVISOR
 from app.deps import enforce_csrf, get_current_user, get_db, require_supervisor, require_user
 from app.models import Task, TaskEvidence, User
-from app.schemas import CreateUserIn, EvidenceCommentIn, RejectIn, TaskCreate, TaskUpdate
+from app.schemas import CreateUserIn, EvidenceCommentIn, PasswordChangeIn, RejectIn, TaskCreate, TaskUpdate
 from app.security import dump_invite
 from app.services import (
     approve_task,
+    change_password,
     create_collaborator,
     create_task,
     delete_task,
@@ -324,8 +325,54 @@ async def profile_page(
         created=None,
         invite_url=None,
         form_errors=[],
+        password_errors=[],
     )
     return render(request, "profile.html", ctx)
+
+
+@router.post("/perfil/contrasena")
+async def change_password_form(
+    request: Request,
+    current_password: str = Form(""),
+    new_password: str = Form(""),
+    csrf_token: str = Form(""),
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+):
+    from app.routers.auth import set_session
+
+    enforce_csrf(request, request.headers.get("x-csrf-token") or csrf_token)
+
+    async def _again(errors: list[str], status_code: int):
+        members = await list_members(db, user) if user.role == ROLE_SUPERVISOR else []
+        ctx = await shell_context(
+            db,
+            user,
+            members=members,
+            created=None,
+            invite_url=None,
+            form_errors=[],
+            password_errors=errors,
+        )
+        return render(request, "profile.html", ctx, status_code=status_code)
+
+    try:
+        data = PasswordChangeIn.model_validate(
+            {"current_password": current_password, "new_password": new_password}
+        )
+    except ValidationError as exc:
+        return await _again(_messages(exc), 422)
+    try:
+        await change_password(db, user, data.current_password, data.new_password)
+    except HTTPException as exc:
+        detail = exc.detail if isinstance(exc.detail, str) else "No se pudo cambiar la contraseña"
+        return await _again([detail], exc.status_code)
+    response = redirect_with_flash(
+        "/perfil",
+        "Contraseña actualizada. Las otras sesiones quedaron cerradas.",
+    )
+    set_session(response, user.id, user.session_version)
+    return response
 
 
 @router.post("/usuarios")

@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from app.config import ROOT, settings
+from app.config import ROOT, enforce_runtime_safety, settings
 from app.database import engine, init_db
 from app.routers import api, auth, pages
 from app.templating import render, wants_json
@@ -23,8 +23,7 @@ logger = logging.getLogger("taskflow")
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    if settings.secret_key == "dev-only-change-me":
-        logger.warning("SECRET_KEY is the development default. Set SECRET_KEY before deploying.")
+    enforce_runtime_safety()
     if not settings.smtp_configured:
         logger.info("SMTP is not configured. TaskFlow will keep in-app notifications and skip email.")
     settings.upload_path.mkdir(parents=True, exist_ok=True)

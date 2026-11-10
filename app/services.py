@@ -482,6 +482,18 @@ async def authenticate(db: AsyncSession, username: str, password: str) -> User |
     return user
 
 
+async def change_password(db: AsyncSession, user: User, current_password: str, new_password: str) -> User:
+    from app.security import verify_password
+
+    if not verify_password(current_password, user.password_hash):
+        raise HTTPException(status_code=400, detail="La contraseña actual no es correcta")
+    user.password_hash = hash_password(new_password)
+    user.session_version = int(user.session_version or 0) + 1
+    await db.flush()
+    logger.info("Password changed user_id=%s org_id=%s", user.id, user.org_id)
+    return user
+
+
 async def _insert_collaborator(db: AsyncSession, *, org_id: int, data: RegisterIn | CreateUserIn, password: str) -> User:
     org = await db.get(Organization, org_id)
     if org is None:

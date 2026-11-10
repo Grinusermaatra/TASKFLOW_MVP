@@ -32,6 +32,23 @@ def _username_ok(value: str) -> str:
     return cleaned
 
 
+class PasswordChangeIn(BaseModel):
+    current_password: str
+    new_password: str
+
+    @field_validator("current_password")
+    @classmethod
+    def current_password_present(cls, value: str) -> str:
+        if not value:
+            raise ValueError("La contraseña actual es obligatoria")
+        return value
+
+    @field_validator("new_password")
+    @classmethod
+    def new_password_ok(cls, value: str) -> str:
+        return _password_ok(value)
+
+
 class LoginIn(BaseModel):
     username: str
     password: str

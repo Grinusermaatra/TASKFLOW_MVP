@@ -33,11 +33,14 @@ async def get_current_user(
     token = request.cookies.get("taskflow_session")
     if not token:
         return None
-    user_id = load_session(token)
-    if user_id is None:
+    loaded = load_session(token)
+    if loaded is None:
         return None
+    user_id, session_version = loaded
     stmt = select(User).where(User.id == user_id).options(selectinload(User.organization))
     user = (await db.execute(stmt)).scalar_one_or_none()
+    if user is None or user.session_version != session_version:
+        return None
     return user
 
 

@@ -1,6 +1,6 @@
 """JSON API used by the browser and documented at /docs."""
 
-from fastapi import APIRouter, Depends, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Request, Response, UploadFile
 from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +14,7 @@ from app.schemas import (
     InviteOut,
     LoginIn,
     MessageOut,
+    PasswordChangeIn,
     NotificationOut,
     RejectIn,
     TaskActionOut,
@@ -28,6 +29,7 @@ from app.security import dump_invite
 from app.services import (
     approve_task,
     authenticate,
+    change_password,
     create_collaborator,
     create_task,
     delete_task,
@@ -63,7 +65,7 @@ async def api_login(
     from fastapi.responses import JSONResponse
 
     response = JSONResponse({"ok": True, "message": "Sesión iniciada", "redirect": "/tareas"})
-    set_session(response, user.id)
+    set_session(response, user.id, user.session_version)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -71,6 +73,25 @@ async def api_login(
 @router.get("/me", response_model=UserOut)
 async def me(user: User = Depends(require_user)):
     return user
+
+
+@router.post("/perfil/contrasena", response_model=MessageOut)
+async def api_change_password(
+    data: PasswordChangeIn,
+    response: Response,
+    user: User = Depends(require_user),
+    db: AsyncSession = Depends(get_db),
+    _: None = Depends(require_csrf_header),
+):
+    from app.routers.auth import set_session
+
+    await change_password(db, user, data.current_password, data.new_password)
+    set_session(response, user.id, user.session_version)
+    response.headers["Cache-Control"] = "no-store"
+    return MessageOut(
+        message="Contraseña actualizada. Las otras sesiones quedaron cerradas.",
+        redirect="/perfil",
+    )
 
 
 @router.get("/tareas", response_model=list[TaskOut])

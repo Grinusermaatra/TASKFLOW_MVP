@@ -10,6 +10,25 @@
     <div class="flex justify-between gap-3"><dt class="text-slate-500">Rol</dt><dd class="font-medium">{{ role_label(user.role) }}</dd></div>
     <div class="flex justify-between gap-3"><dt class="text-slate-500">Organización</dt><dd class="text-right font-medium">{{ user.organization.name }}</dd></div>
   </dl>
+  <form method="post" action="/perfil/contrasena" class="mt-5 space-y-3" data-enhance data-kind="json" data-api="/api/perfil/contrasena">
+    <h2 class="text-lg font-semibold">Cambiar contraseña</h2>
+    <p class="text-sm text-slate-500">Al guardarla, las otras sesiones de esta cuenta dejan de valer.</p>
+    {% if password_errors %}
+    <ul class="space-y-1 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-800" role="alert">
+      {% for item in password_errors %}<li>{{ item }}</li>{% endfor %}
+    </ul>
+    {% endif %}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    <label class="field">
+      <span>Contraseña actual</span>
+      <input name="current_password" type="password" autocomplete="current-password" required>
+    </label>
+    <label class="field">
+      <span>Nueva contraseña</span>
+      <input name="new_password" type="password" autocomplete="new-password" minlength="8" required>
+    </label>
+    <button type="submit" class="btn-primary w-full">Guardar contraseña</button>
+  </form>
   <form method="post" action="/logout" class="mt-5">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <button type="submit" class="btn-secondary w-full">Cerrar sesión</button>

@@ -35,7 +35,20 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSe
 
 
 async def init_db() -> None:
+    from sqlalchemy import inspect, text
+
     from app import models  # noqa: F401
+
+    def _ensure_session_version(sync_conn) -> None:
+        inspector = inspect(sync_conn)
+        if not inspector.has_table("users"):
+            return
+        names = {column["name"] for column in inspector.get_columns("users")}
+        if "session_version" not in names:
+            sync_conn.execute(
+                text("ALTER TABLE users ADD COLUMN session_version INTEGER NOT NULL DEFAULT 0")
+            )
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.run_sync(_ensure_session_version)

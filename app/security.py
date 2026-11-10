@@ -43,11 +43,11 @@ def _serializer(salt: str) -> URLSafeTimedSerializer:
     return URLSafeTimedSerializer(settings.secret_key, salt=salt)
 
 
-def dump_session(user_id: int) -> str:
-    return _serializer("taskflow-session-v1").dumps({"uid": user_id})
+def dump_session(user_id: int, session_version: int) -> str:
+    return _serializer("taskflow-session-v1").dumps({"uid": user_id, "sv": int(session_version)})
 
 
-def load_session(token: str) -> int | None:
+def load_session(token: str) -> tuple[int, int] | None:
     try:
         data = _serializer("taskflow-session-v1").loads(token, max_age=SESSION_MAX_AGE)
     except (BadSignature, SignatureExpired):
@@ -55,9 +55,12 @@ def load_session(token: str) -> int | None:
     if not isinstance(data, dict):
         return None
     uid = data.get("uid")
+    version = data.get("sv")
     if isinstance(uid, bool) or not isinstance(uid, int):
         return None
-    return uid
+    if isinstance(version, bool) or not isinstance(version, int):
+        return None
+    return uid, version
 
 
 def dump_invite(org_id: int) -> str:

@@ -16,10 +16,10 @@ from app.templating import redirect_with_flash, render
 router = APIRouter(tags=["auth"])
 
 
-def set_session(response, user_id: int):
+def set_session(response, user_id: int, session_version: int):
     response.set_cookie(
         SESSION_COOKIE,
-        dump_session(user_id),
+        dump_session(user_id, session_version),
         max_age=SESSION_MAX_AGE,
         httponly=True,
         samesite="lax",
@@ -84,7 +84,7 @@ async def login_submit(
             status_code=400,
         )
     response = RedirectResponse("/tareas", status_code=303)
-    set_session(response, user.id)
+    set_session(response, user.id, user.session_version)
     response.headers["Cache-Control"] = "no-store"
     return response
 
@@ -93,9 +93,10 @@ async def login_submit(
 async def logout(
     request: Request,
     csrf_token: str = Form(""),
-    _: User = Depends(require_user),
+    user: User = Depends(require_user),
 ):
     enforce_csrf(request, request.headers.get("x-csrf-token") or csrf_token)
+    user.session_version = int(user.session_version or 0) + 1
     response = RedirectResponse("/login", status_code=303)
     clear_session(response)
     response.headers["Cache-Control"] = "no-store"
@@ -151,5 +152,5 @@ async def register_submit(
         )
     user = await register_from_invite(db, org_id, data)
     response = redirect_with_flash("/tareas", "Cuenta creada. Ya puedes trabajar en tus tareas.")
-    set_session(response, user.id)
+    set_session(response, user.id, user.session_version)
     return response

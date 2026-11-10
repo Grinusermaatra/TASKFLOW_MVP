@@ -11,5 +11,7 @@ services:
         value: "1"
       - key: COOKIE_SECURE
         value: "true"
+      - key: TASKFLOW_ENV
+        value: production
       - key: PYTHONUNBUFFERED
         value: "1"
